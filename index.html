@@ -2,136 +2,96 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>社區散步友善地圖</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
-    :root{--accent:#2c7;}
-    body,html,#map{height:100%;margin:0;}
-    #searchBox{position:absolute;top:10px;left:50%;transform:translateX(-50%);
-      z-index:1000;background:#fff;padding:5px;border-radius:8px;
-      box-shadow:0 2px 6px rgba(0,0,0,.3);}
-    #searchInput{padding:5px;width:200px;}
-    .leaflet-popup-content{font-size:14px;}
+    #map { height: 100vh; }
   </style>
 </head>
 <body>
-  <div id="searchBox">
-    <input id="searchInput" type="text" placeholder="搜尋地點 (飲水機/便利商店/市場/公園/廁所)">
-    <button onclick="searchPOI()">搜尋</button>
-  </div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script>
-    const map=L.map('map').setView([25.0330,121.5654],15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      maxZoom:19,
-      attribution:'&copy; OpenStreetMap'
+    const map = L.map('map').setView([25.0330, 121.5654], 16); // 台北市中心
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
-    // 各分類的查詢
-    const categories={
-      water:'node["amenity"="drinking_water"](around:RADIUS,LAT,LON);',
-      convenience:`
+    // 各類地標查詢條件
+    const categories = {
+      water: 'node["amenity"="drinking_water"](around:RADIUS,LAT,LON);',
+      convenience: `
         node["shop"="convenience"](around:RADIUS,LAT,LON);
         node["shop"="supermarket"]["brand"="Simple Mart"](around:RADIUS,LAT,LON);
-        node["shop"="supermarket"]["name"="美廉社"](around:RADIUS,LAT,LON);
       `,
-      market:`
-        node["amenity"="marketplace"](around:RADIUS,LAT,LON);
-        node["shop"="supermarket"]["brand"="PX Mart"](around:RADIUS,LAT,LON);
-        node["shop"="supermarket"]["name"="全聯福利中心"](around:RADIUS,LAT,LON);
-      `,
-      park:'way["leisure"="park"](around:RADIUS,LAT,LON);',
-      toilet:`
+      market: 'node["amenity"="marketplace"](around:RADIUS,LAT,LON);',
+      park: 'way["leisure"="park"](around:RADIUS,LAT,LON);',
+      toilet: `
         node["amenity"="toilets"](around:RADIUS,LAT,LON);
         node["toilets"="yes"](around:RADIUS,LAT,LON);
         way["toilets"="yes"](around:RADIUS,LAT,LON);
       `
     };
 
-    const icons={
-      water:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/728/728093.png",iconSize:[26,26]}),
-      convenience:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/3721/3721033.png",iconSize:[26,26]}),
-      market:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/3075/3075977.png",iconSize:[26,26]}),
-      park:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/3103/3103472.png",iconSize:[26,26]}),
-      toilet:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/481/481873.png",iconSize:[26,26]}),
-      user:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/149/149071.png",iconSize:[30,30]})
+    // icon 設定
+    const icons = {
+      water: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/427/427735.png', iconSize:[30,30]}),
+      convenience: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/2972/2972185.png', iconSize:[30,30]}),
+      market: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/3076/3076098.png', iconSize:[30,30]}),
+      park: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/427/427735.png', iconSize:[30,30]}),
+      toilet: L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/482/482946.png', iconSize:[30,30]})
     };
 
-    let markers=[];
+    // 搜尋地標
+    function searchAmenities(lat, lon, radius=500) {
+      for (const [type, query] of Object.entries(categories)) {
+        const fullQuery = `
+          [out:json];
+          (
+            ${query.replace(/LAT/g, lat).replace(/LON/g, lon).replace(/RADIUS/g, radius)}
+          );
+          out center;
+        `;
 
-    // 搜尋 POI
-    async function searchPOI(){
-      markers.forEach(m=>map.removeLayer(m));
-      markers=[];
-
-      const q=document.getElementById("searchInput").value.trim();
-      let key=null;
-      if(q.includes("飲水")) key="water";
-      else if(q.includes("便利")) key="convenience";
-      else if(q.includes("市場")) key="market";
-      else if(q.includes("公園")) key="park";
-      else if(q.includes("廁所")) key="toilet";
-      if(!key){alert("請輸入有效的搜尋關鍵字");return;}
-
-      const center=map.getCenter();
-      const query=`[out:json][timeout:25];
-        (${categories[key]
-          .replace(/LAT/g,center.lat)
-          .replace(/LON/g,center.lng)
-          .replace(/RADIUS/g,800)}
-        );
-        out center;`;
-
-      try{
-        const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
-        const data=await res.json();
-
-        data.elements.forEach(el=>{
-          const lat=el.lat||el.center?.lat, lon=el.lon||el.center?.lon;
-          if(!lat||!lon) return;
-
-          let matchedType=null;
-          if(el.tags){
-            if(el.tags.amenity==="drinking_water") matchedType="water";
-            else if(el.tags.shop==="convenience") matchedType="convenience";
-            else if(el.tags.shop==="supermarket" && 
-                    (el.tags.brand==="Simple Mart"||el.tags.name==="美廉社")) matchedType="convenience";
-            else if(el.tags.amenity==="marketplace") matchedType="market";
-            else if(el.tags.shop==="supermarket" && 
-                    (el.tags.brand==="PX Mart"||el.tags.name==="全聯福利中心")) matchedType="market";
-            else if(el.tags.leisure==="park") matchedType="park";
-            else if(el.tags.amenity==="toilets"||el.tags.toilets==="yes") matchedType="toilet";
-          }
-
-          if(matchedType){
-            const m=L.marker([lat,lon],{icon:icons[matchedType]}).addTo(map);
-            m.bindPopup(`<b>${el.tags.name||matchedType}</b><br>${matchedType}`);
-            markers.push(m);
-          }
-        });
-
-        if(markers.length>0){
-          const g=L.featureGroup(markers);
-          map.fitBounds(g.getBounds().pad(0.2));
-        }else{
-          alert("附近沒有找到相關設施");
-        }
-      }catch(e){
-        console.error(e);
-        alert("查詢發生錯誤");
+        fetch("https://overpass-api.de/api/interpreter", {
+          method: "POST",
+          body: fullQuery
+        })
+        .then(res => res.json())
+        .then(data => {
+          data.elements.forEach(el => {
+            const latlng = el.type==="node" ? [el.lat, el.lon] : [el.center.lat, el.center.lon];
+            let matchedType=null;
+            if(el.tags){
+              if(el.tags.amenity==="drinking_water") matchedType="water";
+              else if(el.tags.shop==="convenience") matchedType="convenience";
+              else if(el.tags.shop==="supermarket" && el.tags.brand==="Simple Mart") matchedType="convenience"; // ✅ 美廉社
+              else if(el.tags.amenity==="marketplace") matchedType="market";
+              else if(el.tags.leisure==="park") matchedType="park";
+              else if(el.tags.amenity==="toilets" || el.tags.toilets==="yes") matchedType="toilet";
+            }
+            if(matchedType){
+              L.marker(latlng,{icon:icons[matchedType]})
+                .addTo(map)
+                .bindPopup(el.tags.name || matchedType);
+            }
+          });
+        })
+        .catch(err => console.error("Overpass error:", err));
       }
     }
 
-    // 顯示使用者位置
-    map.locate({setView:true,maxZoom:16});
-    map.on('locationfound',e=>{
-      const userMarker=L.marker(e.latlng,{icon:icons.user}).addTo(map).bindPopup("您在這裡");
-      markers.push(userMarker);
+    // 取得目前位置
+    map.locate({setView:true, maxZoom:16});
+    map.on('locationfound', e=>{
+      L.marker(e.latlng, {icon:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/1946/1946429.png",iconSize:[30,30]})})
+        .addTo(map).bindPopup("你在這裡");
+      searchAmenities(e.latitude, e.longitude, 800);
     });
-    map.on('locationerror',()=>alert("無法取得您的位置"));
   </script>
 </body>
 </html>
