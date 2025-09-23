@@ -27,7 +27,7 @@
       font-size:14px;
     }
     .controls label { display:block; margin:4px 0; }
-    .controls select, .controls input, .controls button { margin-top:6px; }
+    .controls input, .controls button { margin-top:6px; }
     .controls button {
       padding:4px 8px; border-radius:6px; border:none;
       background:#4CAF50; color:white; cursor:pointer;
@@ -54,19 +54,19 @@
 <script>
 const map = L.map("map", { zoomControl: false }).setView([25.033964,121.564468],15);
 L.control.zoom({ position:"bottomright" }).addTo(map);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom:19,
+  attribution:'© OpenStreetMap'
+}).addTo(map);
 
-const userIcon = L.icon({
-  iconUrl:"https://cdn-icons-png.flaticon.com/512/149/149071.png",
-  iconSize:[40,40], iconAnchor:[20,40], popupAnchor:[0,-40]
-});
+const userIcon = L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/149/149071.png", iconSize:[40,40], iconAnchor:[20,40]});
 
 const icons = {
-  water:L.icon({ iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f4a7.png", iconSize:[40,40]}),
-  convenience:L.icon({ iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f3ea.png", iconSize:[40,40]}),
-  market:L.icon({ iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f34e.png", iconSize:[40,40]}),
-  park:L.icon({ iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f333.png", iconSize:[40,40]}),
-  toilet:L.icon({ iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f6be.png", iconSize:[40,40]})
+  water:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f4a7.png", iconSize:[40,40]}),
+  convenience:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f3ea.png", iconSize:[40,40]}),
+  market:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f34e.png", iconSize:[40,40]}),
+  park:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f333.png", iconSize:[40,40]}),
+  toilet:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f6be.png", iconSize:[40,40]})
 };
 
 let userMarker, userLat, userLon;
@@ -76,62 +76,45 @@ navigator.geolocation.watchPosition(pos=>{
   if(!userMarker){
     userMarker = L.marker([userLat,userLon],{icon:userIcon}).addTo(map).bindPopup("你在這裡 📍");
     map.setView([userLat,userLon],16);
-  } else {
-    userMarker.setLatLng([userLat,userLon]);
-  }
+  } else { userMarker.setLatLng([userLat,userLon]); }
 }, err=>{ console.error("定位失敗：",err); });
 
 const categories = {
-  water:'node["amenity"="drinking_water"](around:RADIUS,LAT,LON);',
-  convenience:`
-    node["shop"="convenience"](around:RADIUS,LAT,LON);
-    node["name"="美廉社"](around:RADIUS,LAT,LON);
-  `,
-  market:`
-    node["amenity"="marketplace"](around:RADIUS,LAT,LON);
-    node["name"="全聯"](around:RADIUS,LAT,LON);
-    node["name"="全聯福利中心"](around:RADIUS,LAT,LON);
-    node["name"="家樂福"](around:RADIUS,LAT,LON);
-    node["name"="大買家"](around:RADIUS,LAT,LON);
-    node["shop"="supermarket"](around:RADIUS,LAT,LON);
-  `,
-  park:'way["leisure"="park"](around:RADIUS,LAT,LON);',
-  toilet:`
-    node["amenity"="toilets"](around:RADIUS,LAT,LON);
-    node["toilets"="yes"](around:RADIUS,LAT,LON);
-    way["toilets"="yes"](around:RADIUS,LAT,LON);
-  `
+  water: 'node["amenity"="drinking_water"](around:RADIUS,LAT,LON);',
+  convenience: 'node["shop"="convenience"](around:RADIUS,LAT,LON); node["name"="美廉社"](around:RADIUS,LAT,LON);',
+  market: 'node["amenity"="marketplace"](around:RADIUS,LAT,LON); node["shop"="supermarket"](around:RADIUS,LAT,LON); node["name"="全聯"](around:RADIUS,LAT,LON); node["name"="全聯福利中心"](around:RADIUS,LAT,LON); node["name"="家樂福"](around:RADIUS,LAT,LON); node["name"="大買家"](around:RADIUS,LAT,LON);',
+  park: 'way["leisure"="park"](around:RADIUS,LAT,LON);',
+  toilet: 'node["amenity"="toilets"](around:RADIUS,LAT,LON); way["amenity"="toilets"](around:RADIUS,LAT,LON);'
 };
 
-function buildOverpassQuery(lat, lon, radius, selections){
-  if(!selections || selections.length===0) return null;
-  let body='[out:json][timeout:25];(';
-  for(const sel of selections){
-    let frag = categories[sel];
-    frag = frag.replace(/RADIUS/g,radius).replace(/LAT/g,lat).replace(/LON/g,lon);
-    body += "\n"+frag;
-  }
-  body+='\n);out center;';
-  return body;
+function buildQuery(lat, lon, radius, selections){
+  if(!selections.length) return null;
+  let q = '[out:json][timeout:25];(';
+  selections.forEach(sel=>{
+    let frag = categories[sel].replace(/RADIUS/g,radius).replace(/LAT/g,lat).replace(/LON/g,lon);
+    q += frag;
+  });
+  q += ');out center;';
+  return q;
 }
 
-let searchMarkers=[], routeLine;
+let markers=[], routeLine;
 
 document.getElementById("searchBtn").addEventListener("click", ()=>{
-  if(!userMarker){ alert("尚未取得定位"); return; }
+  if(!userLat || !userLon){ alert("尚未取得定位"); return; }
   const checked = Array.from(document.querySelectorAll("input[type=checkbox]:checked")).map(c=>c.value);
-  const radius = parseInt(document.getElementById("radiusInput").value)||500;
-  const query = buildOverpassQuery(userLat,userLon,radius,checked);
-  if(!query){ alert("請先選擇要搜尋的類別"); return; }
+  const radius = parseInt(document.getElementById("radiusInput").value) || 500;
+  const query = buildQuery(userLat,userLon,radius,checked);
+  if(!query){ alert("請先選擇類別"); return; }
 
-  searchMarkers.forEach(m=>map.removeLayer(m));
-  searchMarkers=[];
-  if(routeLine) map.removeLayer(routeLine);
+  markers.forEach(m=>map.removeLayer(m));
+  markers = [];
+  if(routeLine){ map.removeLayer(routeLine); }
 
   fetch("https://overpass-api.de/api/interpreter", {
     method:"POST",
-    headers:{"Content-Type":"application/x-www-form-urlencoded"},
-    body:"data="+encodeURIComponent(query)
+    headers: {"Content-Type":"application/x-www-form-urlencoded"},
+    body: "data="+encodeURIComponent(query)
   })
   .then(r=>r.json())
   .then(data=>{
@@ -140,53 +123,37 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
       let lon = el.lon || el.center?.lon;
       if(!lat || !lon) return;
 
-      let matchedType=null;
+      let type=null;
       if(el.tags){
-        if(el.tags.amenity==="drinking_water") matchedType="water";
-        else if(el.tags.shop==="convenience") matchedType="convenience";
-        else if(el.tags.name==="美廉社") matchedType="convenience";
-        else if(el.tags.amenity==="marketplace") matchedType="market";
-        else if(["全聯","全聯福利中心","家樂福","大買家"].includes(el.tags.name)) matchedType="market";
-        else if(el.tags.shop==="supermarket") matchedType="market";
-        else if(el.tags.leisure==="park") matchedType="park";
-        else if(el.tags.amenity==="toilets") matchedType="toilet";
-        else if(el.tags.toilets==="yes") matchedType="toilet";
+        if(el.tags.amenity==="drinking_water") type="water";
+        else if(el.tags.shop==="convenience" || el.tags.name==="美廉社") type="convenience";
+        else if(el.tags.amenity==="marketplace" || el.tags.shop==="supermarket" || ["全聯","全聯福利中心","家樂福","大買家"].includes(el.tags.name)) type="market";
+        else if(el.tags.leisure==="park") type="park";
+        else if(el.tags.amenity==="toilets") type="toilet";
       }
 
-      if(matchedType==="park" && el.type==="way" && el.center){
-        lat = el.center.lat;
-        lon = el.center.lon;
-      }
+      if(type==="park" && el.type==="way" && el.center){ lat=el.center.lat; lon=el.center.lon; }
 
-      const marker = L.marker([lat,lon],{icon:matchedType?icons[matchedType]:undefined}).addTo(map);
-      let placeName = el.tags.name || (
-        matchedType==="market" ? "市場/超市 (未命名)" :
-        matchedType==="toilet" ? "廁所" :
-        matchedType||"地點"
-      );
-      if(matchedType==="market" && el.tags.name) placeName = el.tags.name + "市場/超市";
+      const marker = L.marker([lat,lon], {icon:type?icons[type]:undefined}).addTo(map);
+      let name = el.tags.name || (type==="market"?"市場/超市 (未命名)":type==="toilet"?"廁所":"地點");
+      if(type==="market" && el.tags.name) name += "市場/超市";
 
-      marker.bindTooltip(placeName,{permanent:true,direction:"top",offset:[0,-10],className:"place-label"});
-      marker.bindPopup(`
-        <b>${placeName}</b><br>
-        類型: ${matchedType||"未知"}<br>
+      marker.bindTooltip(name,{permanent:true,direction:"top",offset:[0,-10]}).bindPopup(`
+        <b>${name}</b><br>類型: ${type||"未知"}<br>
         <button onclick="routeTo(${lat},${lon})">導航</button>
       `);
 
-      searchMarkers.push(marker);
+      markers.push(marker);
     });
-  })
-  .catch(err=>{ console.error(err); alert("查詢失敗，請稍後再試"); });
+  }).catch(err=>{ console.error(err); alert("查詢失敗"); });
 });
 
-window.routeTo=function(destLat,destLon){
+window.routeTo = function(destLat,destLon){
   if(!userLat || !userLon){ alert("尚未取得使用者位置"); return; }
-  if(routeLine) map.removeLayer(routeLine);
-
+  if(routeLine){ map.removeLayer(routeLine); }
   const url = `https://router.project-osrm.org/route/v1/foot/${userLon},${userLat};${destLon},${destLat}?overview=full&geometries=geojson`;
-
   fetch(url).then(r=>r.json()).then(data=>{
-    if(!data.routes || data.routes.length===0){ alert("無法規劃路線"); return; }
+    if(!data.routes || !data.routes.length){ alert("無法規劃路線"); return; }
     const coords = data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
     routeLine = L.polyline(coords,{color:"blue",weight:5}).addTo(map);
     map.fitBounds(routeLine.getBounds());
