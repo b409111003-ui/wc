@@ -70,7 +70,11 @@ const categories = {
   convenience:'node["shop"="convenience"](around:RADIUS,LAT,LON);',
   market:'node["amenity"="marketplace"](around:RADIUS,LAT,LON);',
   park:'way["leisure"="park"](around:RADIUS,LAT,LON);',
-  toilet:'node["amenity"="toilets"](around:RADIUS,LAT,LON);'
+  toilet:`
+    node["amenity"="toilets"](around:RADIUS,LAT,LON);
+    node["toilets"="yes"](around:RADIUS,LAT,LON);
+    way["toilets"="yes"](around:RADIUS,LAT,LON);
+  `
 };
 
 function buildOverpassQuery(lat, lon, radius, selections){
@@ -117,6 +121,7 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
         else if(el.tags.amenity==="marketplace") matchedType="market";
         else if(el.tags.leisure==="park") matchedType="park";
         else if(el.tags.amenity==="toilets") matchedType="toilet";
+        else if(el.tags.toilets==="yes") matchedType="toilet"; // 🚾 公共設施內的廁所
       }
 
       // 公園取 center 避免導航錯誤
@@ -128,7 +133,7 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
       const marker = L.marker([lat,lon],{icon:matchedType?icons[matchedType]:undefined}).addTo(map);
       let placeName = el.tags.name || (
         matchedType==="market" ? "市場 (未命名)" :
-        matchedType==="toilet" ? "公廁" :
+        matchedType==="toilet" ? "廁所" :
         matchedType||"地點"
       );
       if(matchedType==="market" && el.tags.name) placeName = el.tags.name + "市場";
