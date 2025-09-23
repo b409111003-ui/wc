@@ -25,7 +25,7 @@
 <div class="controls">
   <label><input type="checkbox" value="water"> 飲水機</label>
   <label><input type="checkbox" value="convenience"> 便利商店</label>
-  <label><input type="checkbox" value="market"> 市場</label>
+  <label><input type="checkbox" value="market"> 市場/超市</label>
   <label><input type="checkbox" value="park"> 公園</label>
   <label><input type="checkbox" value="toilet"> 廁所</label>
   <label>搜尋半徑 (公尺)：<input type="number" id="radiusInput" value="500" min="100" step="100"></label>
@@ -74,8 +74,10 @@ const categories = {
   market:`
     node["amenity"="marketplace"](around:RADIUS,LAT,LON);
     node["name"="全聯"](around:RADIUS,LAT,LON);
+    node["name"="全聯福利中心"](around:RADIUS,LAT,LON);
     node["name"="家樂福"](around:RADIUS,LAT,LON);
     node["name"="大買家"](around:RADIUS,LAT,LON);
+    node["shop"="supermarket"](around:RADIUS,LAT,LON);
   `,
   park:'way["leisure"="park"](around:RADIUS,LAT,LON);',
   toilet:`
@@ -128,7 +130,8 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
         else if(el.tags.shop==="convenience") matchedType="convenience";
         else if(el.tags.name==="美廉社") matchedType="convenience";
         else if(el.tags.amenity==="marketplace") matchedType="market";
-        else if(["全聯","家樂福","大買家"].includes(el.tags.name)) matchedType="market";
+        else if(["全聯","全聯福利中心","家樂福","大買家"].includes(el.tags.name)) matchedType="market";
+        else if(el.tags.shop==="supermarket") matchedType="market";
         else if(el.tags.leisure==="park") matchedType="park";
         else if(el.tags.amenity==="toilets") matchedType="toilet";
         else if(el.tags.toilets==="yes") matchedType="toilet";
@@ -141,11 +144,11 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
 
       const marker = L.marker([lat,lon],{icon:matchedType?icons[matchedType]:undefined}).addTo(map);
       let placeName = el.tags.name || (
-        matchedType==="market" ? "市場 (未命名)" :
+        matchedType==="market" ? "市場/超市 (未命名)" :
         matchedType==="toilet" ? "廁所" :
         matchedType||"地點"
       );
-      if(matchedType==="market" && el.tags.name) placeName = el.tags.name + "市場";
+      if(matchedType==="market" && el.tags.name) placeName = el.tags.name + "市場/超市";
 
       marker.bindTooltip(placeName,{permanent:true,direction:"top",offset:[0,-10],className:"place-label"});
       marker.bindPopup(`
