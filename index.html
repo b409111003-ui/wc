@@ -71,7 +71,12 @@ const categories = {
     node["shop"="convenience"](around:RADIUS,LAT,LON);
     node["name"="美廉社"](around:RADIUS,LAT,LON);
   `,
-  market:'node["amenity"="marketplace"](around:RADIUS,LAT,LON);',
+  market:`
+    node["amenity"="marketplace"](around:RADIUS,LAT,LON);
+    node["name"="全聯"](around:RADIUS,LAT,LON);
+    node["name"="家樂福"](around:RADIUS,LAT,LON);
+    node["name"="大買家"](around:RADIUS,LAT,LON);
+  `,
   park:'way["leisure"="park"](around:RADIUS,LAT,LON);',
   toilet:`
     node["amenity"="toilets"](around:RADIUS,LAT,LON);
@@ -123,9 +128,10 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
         else if(el.tags.shop==="convenience") matchedType="convenience";
         else if(el.tags.name==="美廉社") matchedType="convenience";
         else if(el.tags.amenity==="marketplace") matchedType="market";
+        else if(["全聯","家樂福","大買家"].includes(el.tags.name)) matchedType="market";
         else if(el.tags.leisure==="park") matchedType="park";
         else if(el.tags.amenity==="toilets") matchedType="toilet";
-        else if(el.tags.toilets==="yes") matchedType="toilet"; // 公共設施內的廁所
+        else if(el.tags.toilets==="yes") matchedType="toilet";
       }
 
       if(matchedType==="park" && el.type==="way" && el.center){
