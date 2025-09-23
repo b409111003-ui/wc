@@ -187,4 +187,4 @@ window.routeTo=function(destLat,destLon){
 
   fetch(url).then(r=>r.json()).then(data=>{
     if(!data.routes || data.routes.length===0){ alert("無法規劃路線"); return; }
-    const coords = data.routes[0].geometry.coordinates.map(c=>[c[
+    const coords = data.routes[0].geometry.coordinates
