@@ -2,169 +2,65 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <title>散步友善地圖</title>
+  <title>高齡散步友善地圖</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
-    body, html { margin:0; padding:0; height:100%; }
-    #map { width:100%; height:100%; }
-    .map-title {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1001;
-      background: rgba(255,255,255,0.9);
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: bold;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
     }
-    .controls {
-      position:absolute; top:60px; left:10px; background:white;
-      padding:10px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:1000;
-      font-size:14px;
+    h1 {
+      text-align: center;
+      margin: 10px 0;
+      font-size: 24px;
+      color: #2c3e50;
     }
-    .controls label { display:block; margin:4px 0; }
-    .controls input, .controls button { margin-top:6px; }
-    .controls button {
-      padding:4px 8px; border-radius:6px; border:none;
-      background:#4CAF50; color:white; cursor:pointer;
+    #map {
+      width: 100%;
+      height: calc(100% - 50px);
     }
   </style>
 </head>
 <body>
+  <h1>高齡散步友善地圖</h1>
+  <div id="map"></div>
 
-<div class="map-title">散步友善地圖</div>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    // 初始化地圖
+    var map = L.map('map').setView([25.0330, 121.5654], 14);
 
-<div class="controls">
-  <label><input type="checkbox" value="water"> 飲水機</label>
-  <label><input type="checkbox" value="convenience"> 便利商店</label>
-  <label><input type="checkbox" value="market"> 市場/超市</label>
-  <label><input type="checkbox" value="park"> 公園</label>
-  <label><input type="checkbox" value="toilet"> 廁所</label>
-  <label>搜尋半徑 (公尺)：<input type="number" id="radiusInput" value="500" min="100" step="100"></label>
-  <button id="searchBtn">搜尋附近</button>
-</div>
+    // 地圖圖資來源（OpenStreetMap）
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '地圖資料 © <a href="https://www.openstreetmap.org/">OpenStreetMap</a> 貢獻者'
+    }).addTo(map);
 
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script>
-const map = L.map("map", { zoomControl: false }).setView([25.033964,121.564468],15);
-L.control.zoom({ position:"bottomright" }).addTo(map);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom:19,
-  attribution:'© OpenStreetMap'
-}).addTo(map);
-
-const userIcon = L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/149/149071.png", iconSize:[40,40], iconAnchor:[20,40]});
-
-const icons = {
-  water:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f4a7.png", iconSize:[40,40]}),
-  convenience:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f3ea.png", iconSize:[40,40]}),
-  market:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f34e.png", iconSize:[40,40]}),
-  park:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f333.png", iconSize:[40,40]}),
-  toilet:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f6be.png", iconSize:[40,40]})
-};
-
-let userMarker, userLat, userLon;
-navigator.geolocation.watchPosition(pos=>{
-  userLat = pos.coords.latitude;
-  userLon = pos.coords.longitude;
-  if(!userMarker){
-    userMarker = L.marker([userLat,userLon],{icon:userIcon}).addTo(map).bindPopup("你在這裡 📍");
-    map.setView([userLat,userLon],16);
-  } else { userMarker.setLatLng([userLat,userLon]); }
-}, err=>{ console.error("定位失敗：",err); });
-
-const categories = {
-  water: 'node["amenity"="drinking_water"](around:RADIUS,LAT,LON);',
-  convenience: 'node["shop"="convenience"](around:RADIUS,LAT,LON); node["name"="美廉社"](around:RADIUS,LAT,LON);',
-  market: 'node["amenity"="marketplace"](around:RADIUS,LAT,LON); node["shop"="supermarket"](around:RADIUS,LAT,LON); node["name"="全聯"](around:RADIUS,LAT,LON); node["name"="全聯福利中心"](around:RADIUS,LAT,LON); node["name"="家樂福"](around:RADIUS,LAT,LON); node["name"="大買家"](around:RADIUS,LAT,LON);',
-  park: 'way["leisure"="park"](around:RADIUS,LAT,LON);',
-  toilet: 'node["amenity"="toilets"](around:RADIUS,LAT,LON); way["amenity"="toilets"](around:RADIUS,LAT,LON);'
-};
-
-function buildQuery(lat, lon, radius, selections){
-  if(!selections.length) return null;
-  let q = '[out:json][timeout:25];(';
-  selections.forEach(sel=>{
-    let frag = categories[sel].replace(/RADIUS/g,radius).replace(/LAT/g,lat).replace(/LON/g,lon);
-    q += frag;
-  });
-  q += ');out center;';
-  return q;
-}
-
-let markers=[], routeLine;
-
-document.getElementById("searchBtn").addEventListener("click", ()=>{
-  if(!userLat || !userLon){ alert("尚未取得定位"); return; }
-  const checked = Array.from(document.querySelectorAll("input[type=checkbox]:checked")).map(c=>c.value);
-  const radius = parseInt(document.getElementById("radiusInput").value) || 500;
-  const query = buildQuery(userLat,userLon,radius,checked);
-  if(!query){ alert("請先選擇類別"); return; }
-
-  markers.forEach(m=>map.removeLayer(m));
-  markers = [];
-  if(routeLine){ map.removeLayer(routeLine); routeLine = null; }
-
-  fetch("https://overpass-api.de/api/interpreter", {
-    method:"POST",
-    headers: {"Content-Type":"application/x-www-form-urlencoded"},
-    body: "data="+encodeURIComponent(query)
-  })
-  .then(r=>r.json())
-  .then(data=>{
-    data.elements.forEach(el=>{
-      let lat = el.lat || el.center?.lat;
-      let lon = el.lon || el.center?.lon;
-      if(!lat || !lon) return;
-
-      let type=null;
-      if(el.tags){
-        if(el.tags.amenity==="drinking_water") type="water";
-        else if(el.tags.shop==="convenience" || el.tags.name==="美廉社") type="convenience";
-        else if(el.tags.amenity==="marketplace" || el.tags.shop==="supermarket" || ["全聯","全聯福利中心","家樂福","大買家"].includes(el.tags.name)) type="market";
-        else if(el.tags.leisure==="park") type="park";
-        else if(el.tags.amenity==="toilets") type="toilet";
-      }
-
-      if(type==="park" && el.type==="way" && el.center){ lat=el.center.lat; lon=el.center.lon; }
-
-      const marker = L.marker([lat,lon], {icon:type?icons[type]:undefined}).addTo(map);
-      let name = el.tags.name || (type==="market"?"市場/超市 (未命名)":type==="toilet"?"廁所":"地點");
-      if(type==="market" && el.tags.name) name += "市場/超市";
-
-      marker.bindTooltip(name,{permanent:true,direction:"top",offset:[0,-10]}).bindPopup(`
-        <b>${name}</b><br>類型: ${type||"未知"}<br>
-        <button onclick="routeTo(${lat},${lon})">導航</button>
-      `);
-
-      markers.push(marker);
+    // 你的定位圖示（人形）
+    var userIcon = L.icon({
+      iconUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAACXBIWXMAAAsTAAALEwEAmpwYAAA...",
+      iconSize: [40, 40],
+      iconAnchor: [20, 40]
     });
-  }).catch(err=>{ console.error(err); alert("查詢失敗"); });
-});
 
-window.routeTo = function(destLat,destLon){
-  if(!userLat || !userLon){ alert("尚未取得使用者位置"); return; }
+    // 便利商店圖示
+    var storeIcon = L.icon({
+      iconUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAACXBIWXMAAAsTAAALEwEAmpwYAAA...",
+      iconSize: [40, 40],
+      iconAnchor: [20, 40]
+    });
 
-  // 每次導航前先刪除舊路線
-  if(routeLine){ 
-    map.removeLayer(routeLine); 
-    routeLine = null;
-  }
+    // 加上你的定位
+    var userMarker = L.marker([25.0330, 121.5654], {icon: userIcon}).addTo(map)
+      .bindPopup("我的位置");
 
-  const url = `https://router.project-osrm.org/route/v1/foot/${userLon},${userLat};${destLon},${destLat}?overview=full&geometries=geojson`;
-  fetch(url).then(r=>r.json()).then(data=>{
-    if(!data.routes || !data.routes.length){ alert("無法規劃路線"); return; }
-    const coords = data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
-    routeLine = L.polyline(coords,{color:"blue",weight:5}).addTo(map);
-    map.fitBounds(routeLine.getBounds());
-  }).catch(err=>{ console.error(err); alert("路線規劃失敗"); });
-};
-</script>
+    // 加上一個便利商店地標
+    var storeMarker = L.marker([25.0325, 121.5650], {icon: storeIcon}).addTo(map)
+      .bindPopup("便利商店");
+  </script>
 </body>
 </html>
