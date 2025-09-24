@@ -32,10 +32,6 @@
       padding:4px 8px; border-radius:6px; border:none;
       background:#4CAF50; color:white; cursor:pointer;
     }
-    .leaflet-tooltip.my-tooltip {
-      font-size:14px;
-      font-weight:bold;
-    }
   </style>
 </head>
 <body>
@@ -63,20 +59,14 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution:'© OpenStreetMap'
 }).addTo(map);
 
-// 使用者定位圖示 → 小黃人
-const userIcon = L.icon({
-  iconUrl:"https://cdn-icons-png.flaticon.com/512/1998/1998671.png",
-  iconSize:[45,45],
-  iconAnchor:[22,45]
-});
+const userIcon = L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/149/149071.png", iconSize:[40,40], iconAnchor:[20,40]});
 
-// 各類別圖示（統一大小 35x35）
 const icons = {
-  water:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f4a7.png", iconSize:[35,35], iconAnchor:[17,35]}),
-  convenience:L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/3135/3135715.png", iconSize:[35,35], iconAnchor:[17,35]}),
-  market:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f34e.png", iconSize:[35,35], iconAnchor:[17,35]}),
-  park:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f333.png", iconSize:[35,35], iconAnchor:[17,35]}),
-  toilet:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f6be.png", iconSize:[35,35], iconAnchor:[17,35]})
+  water:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f4a7.png", iconSize:[40,40]}),
+  convenience:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f3ea.png", iconSize:[40,40]}),
+  market:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f34e.png", iconSize:[40,40]}),
+  park:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f333.png", iconSize:[40,40]}),
+  toilet:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f6be.png", iconSize:[40,40]})
 };
 
 let userMarker, userLat, userLon;
@@ -122,7 +112,7 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
   if(routeLine){ map.removeLayer(routeLine); routeLine = null; }
 
   fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
+    method:"POST",
     headers: {"Content-Type":"application/x-www-form-urlencoded"},
     body: "data="+encodeURIComponent(query)
   })
@@ -148,12 +138,7 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
       let name = el.tags.name || (type==="market"?"市場/超市 (未命名)":type==="toilet"?"廁所":"地點");
       if(type==="market" && el.tags.name) name += "市場/超市";
 
-      marker.bindTooltip(name,{
-        permanent:true,
-        direction:"top",
-        offset:[0,-30],
-        className:"my-tooltip"
-      }).bindPopup(`
+      marker.bindTooltip(name,{permanent:true,direction:"top",offset:[0,-10]}).bindPopup(`
         <b>${name}</b><br>類型: ${type||"未知"}<br>
         <button onclick="routeTo(${lat},${lon})">導航</button>
       `);
@@ -165,7 +150,12 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
 
 window.routeTo = function(destLat,destLon){
   if(!userLat || !userLon){ alert("尚未取得使用者位置"); return; }
-  if(routeLine){ map.removeLayer(routeLine); routeLine = null; }
+
+  // 每次導航前先刪除舊路線
+  if(routeLine){ 
+    map.removeLayer(routeLine); 
+    routeLine = null;
+  }
 
   const url = `https://router.project-osrm.org/route/v1/foot/${userLon},${userLat};${destLon},${destLat}?overview=full&geometries=geojson`;
   fetch(url).then(r=>r.json()).then(data=>{
