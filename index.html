@@ -109,7 +109,7 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
 
   markers.forEach(m=>map.removeLayer(m));
   markers = [];
-  if(routeLine){ map.removeLayer(routeLine); }
+  if(routeLine){ map.removeLayer(routeLine); routeLine = null; }
 
   fetch("https://overpass-api.de/api/interpreter", {
     method:"POST",
@@ -150,7 +150,13 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
 
 window.routeTo = function(destLat,destLon){
   if(!userLat || !userLon){ alert("尚未取得使用者位置"); return; }
-  if(routeLine){ map.removeLayer(routeLine); }
+
+  // 每次導航前先刪除舊路線
+  if(routeLine){ 
+    map.removeLayer(routeLine); 
+    routeLine = null;
+  }
+
   const url = `https://router.project-osrm.org/route/v1/foot/${userLon},${userLat};${destLon},${destLat}?overview=full&geometries=geojson`;
   fetch(url).then(r=>r.json()).then(data=>{
     if(!data.routes || !data.routes.length){ alert("無法規劃路線"); return; }
