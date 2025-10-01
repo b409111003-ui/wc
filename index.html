@@ -32,6 +32,22 @@
       padding:4px 8px; border-radius:6px; border:none;
       background:#4CAF50; color:white; cursor:pointer;
     }
+
+    /* 🔴 閃爍動畫 */
+    .pulse {
+      width: 20px;
+      height: 20px;
+      background: rgba(255,0,0,0.5);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      position: absolute;
+      transform: translate(-50%,-50%);
+    }
+    @keyframes pulse {
+      0% { transform: translate(-50%,-50%) scale(0.5); opacity: 0.7; }
+      50% { transform: translate(-50%,-50%) scale(1.5); opacity: 0; }
+      100% { transform: translate(-50%,-50%) scale(0.5); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -59,12 +75,15 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution:'© OpenStreetMap'
 }).addTo(map);
 
-// 🔴 使用更顯眼的紅色人形地標 icon
+// 🔴 使用紅色地標 icon
 const userIcon = L.icon({
-  iconUrl:"https://cdn-icons-png.flaticon.com/512/684/684908.png",
-  iconSize:[45,45],
-  iconAnchor:[22,45],
-  popupAnchor:[0,-40]
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/4872/4872109.png",
+  iconSize: [50, 50],
+  iconAnchor: [25, 50],
+  popupAnchor: [0, -45],
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  shadowSize: [60, 60],
+  shadowAnchor: [20, 60]
 });
 
 const icons = {
@@ -75,14 +94,29 @@ const icons = {
   toilet:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f6be.png", iconSize:[40,40]})
 };
 
-let userMarker, userLat, userLon;
+let userMarker, userLat, userLon, pulseMarker;
+
 navigator.geolocation.watchPosition(pos=>{
   userLat = pos.coords.latitude;
   userLon = pos.coords.longitude;
   if(!userMarker){
+    // 使用紅色 icon 標記使用者
     userMarker = L.marker([userLat,userLon],{icon:userIcon}).addTo(map).bindPopup("你在這裡 📍");
     map.setView([userLat,userLon],16);
-  } else { userMarker.setLatLng([userLat,userLon]); }
+
+    // 加入閃爍圈圈效果
+    const pulseDiv = L.divIcon({
+      className: "",
+      html: '<div class="pulse"></div>',
+      iconSize: [20,20],
+      iconAnchor: [10,10]
+    });
+    pulseMarker = L.marker([userLat,userLon], {icon:pulseDiv}).addTo(map);
+
+  } else { 
+    userMarker.setLatLng([userLat,userLon]); 
+    if(pulseMarker) pulseMarker.setLatLng([userLat,userLon]);
+  }
 }, err=>{ console.error("定位失敗：",err); });
 
 const categories = {
@@ -157,7 +191,6 @@ document.getElementById("searchBtn").addEventListener("click", ()=>{
 window.routeTo = function(destLat,destLon){
   if(!userLat || !userLon){ alert("尚未取得使用者位置"); return; }
 
-  // 每次導航前先刪除舊路線
   if(routeLine){ 
     map.removeLayer(routeLine); 
     routeLine = null;
@@ -174,3 +207,4 @@ window.routeTo = function(destLat,destLon){
 </script>
 </body>
 </html>
+
