@@ -59,7 +59,13 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution:'© OpenStreetMap'
 }).addTo(map);
 
-const userIcon = L.icon({iconUrl:"https://cdn-icons-png.flaticon.com/512/149/149071.png", iconSize:[40,40], iconAnchor:[20,40]});
+// 🔴 使用更顯眼的紅色人形地標 icon
+const userIcon = L.icon({
+  iconUrl:"https://cdn-icons-png.flaticon.com/512/684/684908.png",
+  iconSize:[45,45],
+  iconAnchor:[22,45],
+  popupAnchor:[0,-40]
+});
 
 const icons = {
   water:L.icon({iconUrl:"https://cdn.jsdelivr.net/gh/twitter/twemoji/assets/72x72/1f4a7.png", iconSize:[40,40]}),
